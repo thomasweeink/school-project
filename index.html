@@ -1,1 +1,401 @@
-404: Not Found
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>System Failure</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; font-family: 'Courier New', monospace; touch-action: manipulation; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #000; color: #0f0; }
+
+        /* --- LOCKDOWN --- */
+        #lockdown-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 300;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .blink-text { color: red; font-size: 24px; font-weight: bold; animation: blink 1s infinite; margin-bottom: 20px; }
+        @keyframes blink { 0% {opacity:1;} 50% {opacity:0.3;} 100% {opacity:1;} }
+
+        .secret-btn {
+            width: 120px; height: 120px; 
+            background: url('https://upload.wikimedia.org/wikipedia/commons/d/da/Seal_of_the_Federal_Bureau_of_Investigation.svg') no-repeat center;
+            background-size: contain;
+            filter: grayscale(100%) brightness(0.7);
+            border-radius: 50%;
+            transition: filter 0.3s;
+            position: relative;
+            cursor: pointer;
+        }
+        .secret-btn:active { filter: grayscale(0%) brightness(1); }
+
+        .hold-ring {
+            position: absolute; top: -10px; left: -10px; width: 140px; height: 140px;
+            border-radius: 50%; border: 5px solid transparent; border-top-color: #0f0;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .holding .hold-ring { opacity: 1; animation: spin 3s linear forwards; }
+        @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+
+        /* --- GAME --- */
+        #game-screen {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #050505; z-index: 200; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .target-box {
+            border: 2px solid #0f0; background: rgba(0, 255, 0, 0.1);
+            padding: 15px 40px; font-size: 32px; font-weight: bold;
+            margin-bottom: 20px; box-shadow: 0 0 15px #0f0;
+            text-align: center;
+        }
+        .target-label { font-size: 14px; display: block; margin-bottom: 5px; color: #88ff88; }
+
+        .game-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+            background: rgba(0,20,0,0.8); padding: 15px; border: 1px solid #004400;
+        }
+
+        .grid-cell {
+            width: 70px; height: 70px; background: #001100; border: 1px solid #00ff00;
+            color: #00ff00; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .grid-cell:active { background: #fff; color: #000; transform: scale(0.95); }
+
+        .progress-container { width: 80%; height: 8px; background: #222; margin-top: 30px; border: 1px solid #555; }
+        .progress-bar { width: 0%; height: 100%; background: #0f0; transition: width 0.5s cubic-bezier(0.4, 0.0, 0.2, 1); }
+
+        /* --- WINDOWS XP --- */
+        #xp-screen { display: none; width: 100%; height: 100%; position: relative; font-family: 'Tahoma', sans-serif; color: black; }
+        .bliss-bg { 
+            background: url('https://upload.wikimedia.org/wikipedia/en/2/27/Bliss_%28Windows_XP%29.png') no-repeat center center fixed; 
+            background-size: cover;
+        }
+
+        .desktop-icon {
+            width: 100px; text-align: center; color: white; margin: 20px;
+            text-shadow: 1px 1px 3px black; padding: 10px; position: absolute; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .desktop-icon:active { background-color: rgba(0, 85, 234, 0.4); border: 1px solid rgba(255,255,255,0.3); }
+
+        .window {
+            display: none; position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; background: #ece9d8;
+            border: 1px solid #0055ea; border-radius: 8px 8px 0 0;
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.5); z-index: 50; flex-direction: column;
+        }
+        .title-bar {
+            background: linear-gradient(to bottom, #0058ee 0%, #3593ff 4%, #288eff 18%, #127dff 20%, #0369fc 39%, #0262ee 41%, #0057e5 100%);
+            padding: 8px; color: white; font-weight: bold; display: flex; justify-content: space-between; align-items: center;
+        }
+        .window-content { padding: 20px; font-family: 'Courier New', monospace; background: white; height: 300px; overflow-y: auto; font-size: 16px; }
+        
+        .taskbar {
+            position: absolute; bottom: 0; width: 100%; height: 40px;
+            background: linear-gradient(to bottom, #245edb 0%, #3f76ea 10%, #245edb 100%);
+            display: flex; align-items: center; z-index: 90;
+        }
+        .start-btn {
+            background: linear-gradient(to bottom, #3c8f33, #1e5e16);
+            border-radius: 0 12px 12px 0; padding: 5px 20px; color: white; font-weight: bold; font-style: italic; font-size: 18px;
+            display: flex; align-items: center; gap: 5px; box-shadow: inset 0 2px 5px rgba(255,255,255,0.4);
+        }
+    </style>
+</head>
+<body>
+
+<audio id="startup-sound" src="https://www.myinstants.com/media/sounds/windows-xp-startup.mp3" preload="auto"></audio>
+
+<!-- SCHERM 1: LOCKDOWN -->
+<div id="lockdown-screen">
+    <div style="font-size: 80px;">⚠️</div>
+    <div class="blink-text">FATAL SYSTEM ERROR</div>
+    <div style="color: #666; font-size: 14px; margin-bottom: 40px; max-width: 300px;">
+        Connection terminated by remote host.<br>
+        IP: 192.168.1.105 Blocked.
+    </div>
+    
+    <div class="secret-btn" id="secretBtn">
+        <div class="hold-ring"></div>
+    </div>
+    <div style="margin-top:20px; color: #444; font-size: 12px;">FBI PROPERTY - DO NOT TOUCH</div>
+</div>
+
+<!-- SCHERM 2: GAME -->
+<div id="game-screen">
+    <div style="color:red; font-size: 18px; margin-bottom: 10px;">BRUTE FORCE PROTOCOL GESTART...</div>
+    
+    <div class="target-box">
+        <span class="target-label">ZOEK CODE:</span>
+        <span id="target-display">--</span>
+    </div>
+
+    <div class="game-grid" id="grid"></div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="game-progress"></div>
+    </div>
+    <div id="status-msg" style="height: 20px; color: white; margin-top: 10px; font-weight: bold;"></div>
+</div>
+
+<!-- SCHERM 3: WINDOWS XP -->
+<div id="xp-screen" class="bliss-bg">
+    <div class="desktop-icon" style="top:20px; left:20px;">
+        <div style="font-size:40px;">🗑️</div>
+        <div>Prullenbak</div>
+    </div>
+
+    <div class="desktop-icon" style="top:120px; left:20px;" onclick="openWindow('file-window-1')">
+        <div style="font-size:40px;">📂</div>
+        <div>Dossier.txt</div>
+    </div>
+
+    <div class="desktop-icon" style="top:220px; left:20px;" onclick="openWindow('file-window-2')">
+        <div style="font-size:40px;">📂</div>
+        <div>Dossier_Alpha.txt</div>
+    </div>
+
+    <div class="desktop-icon" style="top:320px; left:20px;" onclick="openWindow('file-window-3')">
+        <div style="font-size:40px;">📂</div>
+        <div>Dossier_Bravo.txt</div>
+    </div>
+
+    <div class="desktop-icon" style="top:420px; left:20px;" onclick="openWindow('file-window-4')">
+        <div style="font-size:40px;">📂</div>
+        <div>Dossier_Charlie.txt</div>
+    </div>
+
+    <!-- WINDOWS -->
+    <div class="window" id="file-window-1">
+        <div class="title-bar">
+            <span>📝 Dossier_Beveiliging.txt</span>
+            <div style="background:#d74040; width:20px; text-align:center; cursor:pointer;" onclick="closeWindow('file-window-1')">X</div>
+        </div>
+        <div class="window-content">
+            <strong>FBI ANALYSE RAPPORT</strong><br>
+            ---------------------------------<br>
+            Datum: Vandaag<br>
+            Status: Gekraakt<br><br>
+            Goed gedaan agenten. Jullie hebben de digitale firewall doorbroken.<br><br>
+            Het systeem is echter nog steeds fysiek vergrendeld.<br>
+            We hebben de locatie van de sleutel getraceerd via de beveiligingscamera's.<br><br>
+            <strong>LOCATIE DATA:</strong><br>
+            "Kijk in de lade onder de printer."<br><br>
+            Code: <strong>8822</strong>
+        </div>
+    </div>
+
+    <div class="window" id="file-window-2">
+        <div class="title-bar">
+            <span>📝 Dossier_Alpha.txt</span>
+            <div style="background:#d74040; width:20px; text-align:center; cursor:pointer;" onclick="closeWindow('file-window-2')">X</div>
+        </div>
+        <div class="window-content">
+            <strong>FBI ANALYSE RAPPORT</strong><br>
+            ---------------------------------<br>
+            Datum: Vandaag<br>
+            Status: Gekraakt<br><br>
+            Goed gedaan agenten. Jullie hebben de digitale firewall doorbroken.<br><br>
+            Het systeem is echter nog steeds fysiek vergrendeld.<br>
+            We hebben de locatie van de sleutel getraceerd via de beveiligingscamera's.<br><br>
+            <strong>LOCATIE DATA:</strong><br>
+            "In de kast achter de deur van lokaal 3B."<br><br>
+            Code: <strong>1947</strong>
+        </div>
+    </div>
+
+    <div class="window" id="file-window-3">
+        <div class="title-bar">
+            <span>📝 Dossier_Bravo.txt</span>
+            <div style="background:#d74040; width:20px; text-align:center; cursor:pointer;" onclick="closeWindow('file-window-3')">X</div>
+        </div>
+        <div class="window-content">
+            <strong>FBI ANALYSE RAPPORT</strong><br>
+            ---------------------------------<br>
+            Datum: Vandaag<br>
+            Status: Gekraakt<br><br>
+            Goed gedaan agenten. Jullie hebben de digitale firewall doorbroken.<br><br>
+            Het systeem is echter nog steeds fysiek vergrendeld.<br>
+            We hebben de locatie van de sleutel getraceerd via de beveiligingscamera's.<br><br>
+            <strong>LOCATIE DATA:</strong><br>
+            "Onder de derde stoel links in de vergaderzaal."<br><br>
+            Code: <strong>5529</strong>
+        </div>
+    </div>
+
+    <div class="window" id="file-window-4">
+        <div class="title-bar">
+            <span>📝 Dossier_Charlie.txt</span>
+            <div style="background:#d74040; width:20px; text-align:center; cursor:pointer;" onclick="closeWindow('file-window-4')">X</div>
+        </div>
+        <div class="window-content">
+            <strong>FBI ANALYSE RAPPORT</strong><br>
+            ---------------------------------<br>
+            Datum: Vandaag<br>
+            Status: Gekraakt<br><br>
+            Goed gedaan agenten. Jullie hebben de digitale firewall doorbroken.<br><br>
+            Het systeem is echter nog steeds fysiek vergrendeld.<br>
+            We hebben de locatie van de sleutel getraceerd via de beveiligingscamera's.<br><br>
+            <strong>LOCATIE DATA:</strong><br>
+            "In de doos onder het podium in de aula."<br><br>
+            Code: <strong>7364</strong>
+        </div>
+    </div>
+
+    <div class="taskbar">
+        <div class="start-btn">❖ Start</div>
+        <div style="color:white; margin-left:auto; margin-right:20px;">12:00</div>
+    </div>
+</div>
+
+<script>
+    const secretBtn = document.getElementById('secretBtn');
+    let holdTimer;
+
+    secretBtn.addEventListener('touchstart', startHold);
+    secretBtn.addEventListener('mousedown', startHold);
+    secretBtn.addEventListener('touchend', cancelHold);
+    secretBtn.addEventListener('mouseup', cancelHold);
+    secretBtn.addEventListener('mouseleave', cancelHold);
+
+    function startHold(e) {
+        e.preventDefault();
+        secretBtn.classList.add('holding');
+        holdTimer = setTimeout(() => {
+            document.getElementById('lockdown-screen').style.display = 'none';
+            initGame();
+        }, 3000);
+    }
+
+    function cancelHold() {
+        secretBtn.classList.remove('holding');
+        clearTimeout(holdTimer);
+    }
+
+    const hexChars = ['A','B','C','D','1','2','3','4','5','6','7','8','9'];
+    let currentTarget = "";
+    let score = 0;
+    const requiredScore = 4;
+    let shuffleInterval;
+    let isGameActive = false;
+
+    function initGame() {
+        document.getElementById('game-screen').style.display = 'flex';
+        score = 0;
+        updateGameProgress();
+
+        const audio = document.getElementById('startup-sound');
+        audio.volume = 0;
+        audio.play().catch(e=>{});
+
+        startRound();
+    }
+
+    function generateCode() {
+        return hexChars[Math.floor(Math.random() * hexChars.length)] + 
+               hexChars[Math.floor(Math.random() * hexChars.length)];
+    }
+
+    function startRound() {
+        if(score >= requiredScore) {
+            winGame();
+            return;
+        }
+
+        currentTarget = generateCode();
+        document.getElementById('target-display').innerText = currentTarget;
+
+        isGameActive = true;
+        renderGrid(); 
+        clearInterval(shuffleInterval);
+        shuffleInterval = setInterval(() => {
+            if(!isGameActive) return;
+            renderGrid();
+        }, 1200); 
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = "";
+        const correctPos = Math.floor(Math.random() * 16);
+
+        for(let i=0; i<16; i++) {
+            let code;
+            if(i === correctPos) {
+                code = currentTarget;
+            } else {
+                code = generateCode();
+                while(code === currentTarget) code = generateCode();
+            }
+
+            const div = document.createElement('div');
+            div.className = 'grid-cell';
+            div.innerText = code;
+            div.onmousedown = () => checkClick(code); 
+            div.ontouchstart = () => checkClick(code);
+            grid.appendChild(div);
+        }
+    }
+
+    function checkClick(clickedCode) {
+        if(!isGameActive) return;
+
+        if(clickedCode === currentTarget) {
+            score++;
+            updateGameProgress();
+            clearInterval(shuffleInterval); 
+            document.getElementById('target-display').style.color = '#0f0';
+            document.getElementById('status-msg').style.color = '#0f0';
+            document.getElementById('status-msg').innerText = "CODE GEACCEPTEERD";
+
+            setTimeout(() => {
+                document.getElementById('target-display').style.color = '';
+                document.getElementById('status-msg').innerText = "";
+                startRound();
+            }, 500);
+        } else {
+            score = 0;
+            updateGameProgress();
+            document.getElementById('game-screen').style.background = '#330000';
+            setTimeout(() => document.getElementById('game-screen').style.background = '#050505', 200);
+            document.getElementById('status-msg').style.color = 'red';
+            document.getElementById('status-msg').innerText = "FOUT! RESETTEN...";
+            clearInterval(shuffleInterval);
+            setTimeout(() => {
+                document.getElementById('status-msg').innerText = "";
+                startRound();
+            }, 1000);
+        }
+    }
+
+    function updateGameProgress() {
+        let pct = (score / requiredScore) * 100;
+        document.getElementById('game-progress').style.width = pct + "%";
+    }
+
+    function winGame() {
+        isGameActive = false;
+        clearInterval(shuffleInterval);
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('xp-screen').style.display = 'block';
+
+        const audio = document.getElementById('startup-sound');
+        audio.volume = 1.0;
+        audio.play();
+    }
+
+    function openWindow(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeWindow(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+</script>
+</body>
+</html>
